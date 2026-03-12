@@ -2,7 +2,7 @@ import { LangType, TranslationType } from "../types";
 
 export const translations: Record<LangType, TranslationType> = {
   uz: {
-    title: "KinoTop AI",
+    title: "Kino FIX",
     home: "Asosiy",
     help: "Yordam",
     heroTitle: "RASM ORQALI",
@@ -23,7 +23,7 @@ export const translations: Record<LangType, TranslationType> = {
     footer: "Barcha huquqlar himoyalangan."
   },
   ru: {
-    title: "КиноТоп AI",
+    title: "Кино Фих",
     home: "Главная",
     help: "Помощь",
     heroTitle: "НАЙДИТЕ ФИЛЬМ",
@@ -44,7 +44,7 @@ export const translations: Record<LangType, TranslationType> = {
     footer: "Все права защищены."
   },
   en: {
-    title: "MovieTop AI",
+    title: "Movie FIX",
     home: "Home",
     help: "Help",
     heroTitle: "FIND MOVIE",
