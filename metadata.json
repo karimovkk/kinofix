@@ -1,0 +1,5 @@
+{
+  "name": "Movie Identifier AI",
+  "description": "Identify movies from screenshots using Google Gemini AI. Just upload a screenshot from YouTube or Shorts to find the movie title.",
+  "requestFramePermissions": []
+}
