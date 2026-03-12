@@ -83,7 +83,17 @@ export default function App() {
       const userRef = doc(db, 'users', user.uid);
       const unsubscribe = onSnapshot(userRef, async (snapshot) => {
         if (snapshot.exists()) {
-          setProfile(snapshot.data() as UserProfile);
+          const data = snapshot.data() as UserProfile;
+          const isAdminEmail = user.email === 'karimovkamron349@gmail.com';
+          
+          // Force admin role if email matches but role is not admin
+          if (isAdminEmail && data.role !== 'admin') {
+            const updatedProfile = { ...data, role: 'admin' as const, dailyLimit: 100 };
+            await updateDoc(userRef, { role: 'admin', dailyLimit: 100 });
+            setProfile(updatedProfile);
+          } else {
+            setProfile(data);
+          }
         } else {
           // Create initial profile if it doesn't exist
           const isAdmin = user.email === 'karimovkamron349@gmail.com';
@@ -249,7 +259,7 @@ export default function App() {
         {profile && (
           <div className="mb-8 flex justify-center">
             <div className="bg-zinc-900/50 border border-white/10 px-4 py-2 rounded-full flex items-center gap-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Bugungi limit:</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">{t.todayLimit}</span>
               <div className="flex items-center gap-2">
                 <div className="w-24 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                   <div 
