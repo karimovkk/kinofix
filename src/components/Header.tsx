@@ -1,15 +1,18 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Clapperboard } from 'lucide-react';
+import { Clapperboard, LogOut, Shield, User as UserIcon } from 'lucide-react';
 import { LangType, TranslationType } from '../types';
 
 interface HeaderProps {
   t: TranslationType;
   lang: LangType;
   setLang: (lang: LangType) => void;
+  profile: any;
+  onLogout: () => void;
+  onShowAdmin: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ t, lang, setLang }) => {
+export const Header: React.FC<HeaderProps> = ({ t, lang, setLang, profile, onLogout, onShowAdmin }) => {
   return (
     <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-xl sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
@@ -40,9 +43,31 @@ export const Header: React.FC<HeaderProps> = ({ t, lang, setLang }) => {
               </button>
             ))}
           </div>
-          <div className="hidden xs:flex items-center gap-4 text-xs font-bold uppercase tracking-widest">
-            <a href="#" className="text-yellow-400">{t.home}</a>
-          </div>
+
+          {profile && (
+            <div className="flex items-center gap-2 sm:gap-4 pl-3 sm:pl-6 border-l border-zinc-800">
+              {profile.role === 'admin' && (
+                <button 
+                  onClick={onShowAdmin}
+                  className="p-2 text-zinc-400 hover:text-yellow-400 transition-colors"
+                  title="Admin Panel"
+                >
+                  <Shield className="w-5 h-5" />
+                </button>
+              )}
+              <div className="hidden sm:flex flex-col items-end">
+                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">Foydalanuvchi</span>
+                <span className="text-xs font-bold text-zinc-200 truncate max-w-[100px]">{profile.email.split('@')[0]}</span>
+              </div>
+              <button 
+                onClick={onLogout}
+                className="p-2 bg-zinc-800 text-zinc-400 rounded-lg hover:bg-red-500/10 hover:text-red-500 transition-all"
+                title="Chiqish"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

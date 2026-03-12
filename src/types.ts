@@ -6,6 +6,20 @@ export interface MovieInfo {
 
 export type LangType = 'uz' | 'ru' | 'en';
 
+export interface UserProfile {
+  uid: string;
+  email: string;
+  role: 'admin' | 'user';
+  dailyLimit: number;
+  requestsToday: number;
+  lastRequestDate: string;
+}
+
+export interface AdminSettings {
+  login: string;
+  pass: string;
+}
+
 export interface TranslationType {
   title: string;
   home: string;

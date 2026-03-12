@@ -1,0 +1,36 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and request limits",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "dailyLimit": { "type": "integer" },
+        "requestsToday": { "type": "integer" },
+        "lastRequestDate": { "type": "string", "format": "date" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "GlobalSettings": {
+      "title": "Global Settings",
+      "description": "Global application settings",
+      "type": "object",
+      "properties": {
+        "defaultDailyLimit": { "type": "integer" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User documents"
+    },
+    "/settings/global": {
+      "schema": "GlobalSettings",
+      "description": "Global settings document"
+    }
+  }
+}
