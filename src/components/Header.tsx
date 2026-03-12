@@ -56,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({ t, lang, setLang, profile, onLog
                 </button>
               )}
               <div className="hidden sm:flex flex-col items-end">
-                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">Foydalanuvchi</span>
+                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">{t.userLabel}</span>
                 <span className="text-xs font-bold text-zinc-200 truncate max-w-[100px]">{profile.email.split('@')[0]}</span>
               </div>
               <button 

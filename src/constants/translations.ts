@@ -2,7 +2,7 @@ import { LangType, TranslationType } from "../types";
 
 export const translations: Record<LangType, TranslationType> = {
   uz: {
-    title: "Kino FIX",
+    title: "Kino Fix",
     home: "Asosiy",
     help: "Yordam",
     heroTitle: "RASM ORQALI",
@@ -20,7 +20,9 @@ export const translations: Record<LangType, TranslationType> = {
     googleBtn: "Google'dan ko'rish",
     waiting: "Natija kutilmoqda",
     waitingDesc: "Rasm yuklang va biz kino olamidagi sirlarni ochib beramiz",
-    footer: "Barcha huquqlar himoyalangan."
+    footer: "Barcha huquqlar himoyalangan.",
+    todayLimit: "Bugungi limit:",
+    userLabel: "Foydalanuvchi"
   },
   ru: {
     title: "Кино Фих",
@@ -41,10 +43,12 @@ export const translations: Record<LangType, TranslationType> = {
     googleBtn: "Посмотреть в Google",
     waiting: "Ожидание результата",
     waitingDesc: "Загрузите фото, и мы раскроем тайны мира кино",
-    footer: "Все права защищены."
+    footer: "Все права защищены.",
+    todayLimit: "Сегодняшний лимит:",
+    userLabel: "Пользователь"
   },
   en: {
-    title: "Movie FIX",
+    title: "Movie Fix",
     home: "Home",
     help: "Help",
     heroTitle: "FIND MOVIE",
@@ -62,6 +66,8 @@ export const translations: Record<LangType, TranslationType> = {
     googleBtn: "Search on Google",
     waiting: "Waiting for result",
     waitingDesc: "Upload an image and we will reveal the secrets of the cinema world",
-    footer: "All rights reserved."
+    footer: "All rights reserved.",
+    todayLimit: "Today's limit:",
+    userLabel: "User"
   }
 };
