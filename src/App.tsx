@@ -105,7 +105,7 @@ export default function App() {
             uid: user.uid,
             email: user.email || '',
             role: isAdmin ? 'admin' : 'user',
-            dailyLimit: isAdmin ? 100 : 2,
+            dailyLimit: isAdmin ? 100 : 5,
             requestsToday: 0,
             lastRequestDate: new Date().toISOString().split('T')[0]
           };

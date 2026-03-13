@@ -29,7 +29,7 @@ service cloud.firestore {
       
       allow create: if isOwner(userId) && 
         request.resource.data.role == 'user' && 
-        request.resource.data.dailyLimit == 2;
+        request.resource.data.dailyLimit == 5;
       
       allow update: if isAdmin() || (
         isOwner(userId) && 
