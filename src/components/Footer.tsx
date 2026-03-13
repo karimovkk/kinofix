@@ -12,7 +12,7 @@ export const Footer: React.FC<FooterProps> = ({ t }) => {
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
           <span className="text-zinc-600 text-[10px] font-bold uppercase tracking-widest">
-            Powered by Gemini AI
+            Powered by karimov.dev
           </span>
         </div>
         <p className="text-zinc-700 text-[9px] font-medium uppercase tracking-widest">
