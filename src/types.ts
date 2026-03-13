@@ -40,4 +40,6 @@ export interface TranslationType {
   waiting: string;
   waitingDesc: string;
   footer: string;
+  todayLimit: string;
+  userLabel: string;
 }

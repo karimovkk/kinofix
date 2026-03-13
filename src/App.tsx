@@ -50,6 +50,10 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (!auth) {
+      setAuthLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setAuthLoading(false);
@@ -58,7 +62,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !db) return;
 
     const unsubscribe = onSnapshot(doc(db, 'settings', 'admin'), async (snapshot) => {
       if (snapshot.exists()) {
@@ -79,7 +83,7 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
+    if (user && db) {
       const userRef = doc(db, 'users', user.uid);
       const unsubscribe = onSnapshot(userRef, async (snapshot) => {
         if (snapshot.exists()) {
@@ -134,7 +138,7 @@ export default function App() {
   };
 
   const handleIdentify = async () => {
-    if (!image || !profile) return;
+    if (!image || !profile || !db) return;
 
     const today = new Date().toISOString().split('T')[0];
     let currentRequests = profile.requestsToday;
@@ -201,6 +205,12 @@ export default function App() {
           <h1 className="text-2xl font-bold text-white mb-2">Xush kelibsiz!</h1>
           <p className="text-zinc-400 mb-8">Kinoni aniqlash uchun tizimga kiring.</p>
           
+          {(!auth || !db) && (
+            <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-yellow-500 text-sm">
+              Diqqat: Firebase sozlanmagan. Iltimos, Secrets menyusidan API kalitlarni kiriting.
+            </div>
+          )}
+
           {loginError && (
             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm">
               {loginError}

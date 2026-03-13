@@ -29,6 +29,10 @@ export const AdminPanel: React.FC = () => {
   const [saveLoading, setSaveLoading] = useState(false);
 
   useEffect(() => {
+    if (!db) {
+      setLoading(false);
+      return;
+    }
     const q = query(collection(db, 'users'));
     const unsubscribeUsers = onSnapshot(q, (snapshot) => {
       const usersData: UserData[] = [];
