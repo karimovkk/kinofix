@@ -1,4 +1,4 @@
-const API_URL = import.meta.env?.VITE_API_URL || 'https://web-production-3b13.up.railway.app/api/v1';
+const API_URL = import.meta.env?.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:8000/api/v1' : 'https://web-production-3b13.up.railway.app/api/v1');
 
 const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem('token');
