@@ -22,7 +22,13 @@ export const translations: Record<LangType, TranslationType> = {
     waitingDesc: "Rasm yuklang va biz kino olamidagi sirlarni ochib beramiz",
     footer: "Barcha huquqlar himoyalangan.",
     todayLimit: "Bugungi limit:",
-    userLabel: "Foydalanuvchi"
+    userLabel: "Foydalanuvchi",
+    history: "Tarix",
+    profileTitle: "Profil",
+    changeName: "Ismni o'zgartirish",
+    changePassword: "Parolni o'zgartirish",
+    logout: "Chiqish",
+    saveChanges: "Saqlash"
   },
   ru: {
     title: "KINO FIX",
@@ -45,7 +51,13 @@ export const translations: Record<LangType, TranslationType> = {
     waitingDesc: "Загрузите фото, и мы раскроем тайны мира кино",
     footer: "Все права защищены.",
     todayLimit: "Сегодняшний лимит:",
-    userLabel: "Пользователь"
+    userLabel: "Пользователь",
+    history: "История",
+    profileTitle: "Профиль",
+    changeName: "Изменить имя",
+    changePassword: "Изменить пароль",
+    logout: "Выйти",
+    saveChanges: "Сохранить"
   },
   en: {
     title: "KINO FIX",
@@ -68,6 +80,12 @@ export const translations: Record<LangType, TranslationType> = {
     waitingDesc: "Upload an image and we will reveal the secrets of the cinema world",
     footer: "All rights reserved.",
     todayLimit: "Today's limit:",
-    userLabel: "User"
+    userLabel: "User",
+    history: "History",
+    profileTitle: "Profile",
+    changeName: "Change Name",
+    changePassword: "Change Password",
+    logout: "Log Out",
+    saveChanges: "Save Changes"
   }
 };

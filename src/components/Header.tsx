@@ -10,9 +10,10 @@ interface HeaderProps {
   profile: any;
   onLogout: () => void;
   onShowAdmin: () => void;
+  onShowProfile: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ t, lang, setLang, profile, onLogout, onShowAdmin }) => {
+export const Header: React.FC<HeaderProps> = ({ t, lang, setLang, profile, onLogout, onShowAdmin, onShowProfile }) => {
   return (
     <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-xl sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
@@ -55,14 +56,24 @@ export const Header: React.FC<HeaderProps> = ({ t, lang, setLang, profile, onLog
                   <Shield className="w-5 h-5" />
                 </button>
               )}
-              <div className="hidden sm:flex flex-col items-end">
-                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">{t.userLabel}</span>
-                <span className="text-xs font-bold text-zinc-200 truncate max-w-[100px]">{profile.email.split('@')[0]}</span>
-              </div>
+              
+              <button 
+                onClick={onShowProfile}
+                className="hidden sm:flex flex-col items-end hover:opacity-80 transition-opacity text-left bg-zinc-800/50 p-1.5 rounded-lg px-3"
+              >
+                <div className="flex items-center gap-2">
+                  <UserIcon className="w-4 h-4 text-zinc-400" />
+                  <div className="flex flex-col items-start">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">{t.userLabel}</span>
+                    <span className="text-xs font-bold text-zinc-200 truncate max-w-[100px]">{profile.displayName || profile.phone}</span>
+                  </div>
+                </div>
+              </button>
+
               <button 
                 onClick={onLogout}
                 className="p-2 bg-zinc-800 text-zinc-400 rounded-lg hover:bg-red-500/10 hover:text-red-500 transition-all"
-                title="Chiqish"
+                title={t.logout || "Chiqish"}
               >
                 <LogOut className="w-5 h-5" />
               </button>

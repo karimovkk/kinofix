@@ -1,116 +1,130 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase';
-import { collection, query, onSnapshot, doc, updateDoc, getDocs, setDoc } from 'firebase/firestore';
-import { Shield, Users, Settings, Search, Edit2, Save, X, Lock, User } from 'lucide-react';
+import { Shield, Users, Settings, Search, Edit2, Save, X, Lock, Trash2, Ban, CheckCircle, Database } from 'lucide-react';
 import { motion } from 'motion/react';
-import { AdminSettings } from '../types';
-
-interface UserData {
-  uid: string;
-  email: string;
-  role: 'admin' | 'user';
-  dailyLimit: number;
-  requestsToday: number;
-  lastRequestDate: string;
-}
+import { AdminSettings, UserProfile } from '../types';
+import { api } from '../services/api';
 
 export const AdminPanel: React.FC = () => {
-  const [users, setUsers] = useState<UserData[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [stats, setStats] = useState<AdminSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLimit, setEditLimit] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'users' | 'settings'>('users');
   
-  // Admin Settings
-  const [adminSettings, setAdminSettings] = useState<AdminSettings>({ login: 'diyow', pass: 'DK_0909' });
-  const [newLogin, setNewLogin] = useState('');
-  const [newPass, setNewPass] = useState('');
+  // Admin Settings (Backend SystemSettings bilan mos)
+  const [defaultDailyLimit, setDefaultDailyLimit] = useState<number>(5);
+  const [adminDailyLimit, setAdminDailyLimit] = useState<number>(999999);
   const [saveLoading, setSaveLoading] = useState(false);
 
   useEffect(() => {
-    if (!db) {
-      setLoading(false);
-      return;
-    }
-    const q = query(collection(db, 'users'));
-    const unsubscribeUsers = onSnapshot(q, (snapshot) => {
-      const usersData: UserData[] = [];
-      snapshot.forEach((doc) => {
-        usersData.push(doc.data() as UserData);
-      });
-      setUsers(usersData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Admin access error:", error);
-      setLoading(false);
-    });
-
-    const unsubscribeSettings = onSnapshot(doc(db, 'settings', 'admin'), (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data() as AdminSettings;
-        setAdminSettings(data);
-        setNewLogin(data.login);
-        setNewPass(data.pass);
-      }
-    });
-
-    return () => {
-      unsubscribeUsers();
-      unsubscribeSettings();
-    };
+    fetchData();
   }, []);
 
-  const handleUpdateLimit = async (uid: string) => {
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const userRef = doc(db, 'users', uid);
-      await updateDoc(userRef, {
-        dailyLimit: editLimit
-      });
-      setEditingId(null);
-    } catch (error) {
-      alert("Limitni yangilashda xatolik yuz berdi.");
+       const [usersData, statsData] = await Promise.all([
+         api.admin.getUsers(200),
+         api.admin.getStats()
+       ]);
+       setUsers(usersData);
+       setStats(statsData);
+       
+       if (statsData) {
+         setDefaultDailyLimit(statsData.defaultDailyLimit || 5);
+         setAdminDailyLimit(statsData.adminDailyLimit || 999999);
+       }
+    } catch (err) {
+      console.error("Admin data fetch error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleUpdateAdminSettings = async (e: React.FormEvent) => {
+  const handleUpdateLimit = async (uid: string) => {
+    try {
+      await api.admin.updateLimit(uid, editLimit);
+      setEditingId(null);
+      fetchData(); // Refresh
+    } catch (error: any) {
+      alert(error.message || "Xatolik yuz berdi");
+    }
+  };
+
+  const handleToggleUser = async (uid: string, currentStatus: boolean) => {
+    try {
+      await api.admin.toggleUser(uid, !currentStatus);
+      fetchData();
+    } catch (error: any) {
+      alert(error.message || "Xatolik yuz berdi");
+    }
+  };
+
+  const handleDeleteUser = async (uid: string) => {
+    if (!confirm("Foydalanuvchini o'chirishni tasdiqlaysizmi? Bu barcha tarixni ham o'chirib yuboradi.")) return;
+    try {
+      await api.admin.deleteUser(uid);
+      fetchData();
+    } catch (error: any) {
+      alert(error.message || "Xatolik yuz berdi");
+    }
+  };
+
+  const handleUpdateRole = async (uid: string, currentRole: string) => {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    if (!confirm(`Rolni ${newRole} ga o'zgartirmoqchimisiz?`)) return;
+    try {
+      await api.admin.updateRole(uid, newRole);
+      fetchData();
+    } catch (error: any) {
+      alert(error.message || "Xatolik yuz berdi");
+    }
+  };
+
+  const handleUpdateGlobalSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaveLoading(true);
     try {
-      await setDoc(doc(db, 'settings', 'admin'), {
-        login: newLogin,
-        pass: newPass
-      });
-      alert("Admin ma'lumotlari muvaffaqiyatli yangilandi!");
-    } catch (error) {
-      alert("Xatolik yuz berdi.");
+      // BUG FIX #6: Backend UpdateSettingsRequest mosligini ta'minlash
+      await api.admin.updateSettings({ defaultDailyLimit, adminDailyLimit });
+      alert("Sozlamalar muvaffaqiyatli yangilandi!");
+      fetchData();
+    } catch (error: any) {
+      alert(error.message || "Xatolik yuz berdi");
     } finally {
       setSaveLoading(false);
     }
   };
 
   const filteredUsers = users.filter(u => 
-    u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    u.phone.includes(searchTerm) || (u.displayName && u.displayName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  if (loading) return <div className="p-8 text-center text-white">Yuklanmoqda...</div>;
+  if (loading && users.length === 0) {
+    return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white font-medium">Yuklanmoqda...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-400 rounded-lg">
-              <Shield className="w-6 h-6 text-black" />
+        <header className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-yellow-400 rounded-2xl shadow-[0_0_20px_rgba(250,204,21,0.2)]">
+              <Shield className="w-7 h-7 text-black" />
             </div>
-            <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
+            <div>
+              <h1 className="text-2xl font-black text-white tracking-tight uppercase">Admin Panel</h1>
+              <p className="text-xs text-zinc-500 font-bold tracking-widest uppercase mt-0.5">Control Center</p>
+            </div>
           </div>
           
-          <div className="flex bg-zinc-900 p-1 rounded-xl border border-white/5">
+          <div className="flex bg-zinc-900/50 p-1 rounded-2xl border border-white/5 backdrop-blur-sm">
             <button 
               onClick={() => setActiveTab('users')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${
-                activeTab === 'users' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
+              className={`px-5 py-2.5 rounded-xl text-sm font-black uppercase tracking-tighter flex items-center gap-2.5 transition-all ${
+                activeTab === 'users' ? 'bg-zinc-800 text-yellow-400 shadow-xl border border-white/5' : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
               <Users className="w-4 h-4" />
@@ -118,8 +132,8 @@ export const AdminPanel: React.FC = () => {
             </button>
             <button 
               onClick={() => setActiveTab('settings')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${
-                activeTab === 'settings' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
+              className={`px-5 py-2.5 rounded-xl text-sm font-black uppercase tracking-tighter flex items-center gap-2.5 transition-all ${
+                activeTab === 'settings' ? 'bg-zinc-800 text-yellow-400 shadow-xl border border-white/5' : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
               <Settings className="w-4 h-4" />
@@ -129,145 +143,180 @@ export const AdminPanel: React.FC = () => {
         </header>
 
         {activeTab === 'users' ? (
-          <div className="bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden">
-            <div className="p-4 border-b border-white/10 bg-white/5 flex items-center gap-3">
-              <Search className="w-5 h-5 text-zinc-500" />
-              <input 
-                type="text" 
-                placeholder="Foydalanuvchini qidirish..."
-                className="bg-transparent border-none outline-none text-white w-full"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+          <div className="space-y-6">
+            {/* Stats Row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Jami Users', value: stats?.totalUsers || 0, icon: Users, color: 'text-blue-400' },
+                { label: 'Jami Qidiruvlar', value: stats?.totalSearches || 0, icon: Search, color: 'text-yellow-400' },
+                { label: 'Daily Limit', value: stats?.defaultDailyLimit || 5, icon: CheckCircle, color: 'text-emerald-400' },
+                { label: 'Admin Limit', value: 'Cheksiz', icon: Shield, color: 'text-purple-400' },
+              ].map((s, idx) => (
+                <div key={idx} className="bg-zinc-900/40 border border-white/5 p-5 rounded-3xl backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-zinc-800 rounded-lg">
+                      <s.icon className={`w-4 h-4 ${s.color}`} />
+                    </div>
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{s.label}</span>
+                  </div>
+                  <div className="text-2xl font-black text-white">{s.value}</div>
+                </div>
+              ))}
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="text-zinc-500 text-xs uppercase tracking-wider border-b border-white/10">
-                    <th className="px-6 py-4 font-medium">Email</th>
-                    <th className="px-6 py-4 font-medium">Rol</th>
-                    <th className="px-6 py-4 font-medium">Kunlik Limit</th>
-                    <th className="px-6 py-4 font-medium">Bugungi so'rovlar</th>
-                    <th className="px-6 py-4 font-medium">Amallar</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filteredUsers.map((user) => (
-                    <tr key={user.uid} className="text-zinc-300 hover:bg-white/5 transition-colors">
-                      <td className="px-6 py-4">{user.email}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
-                          user.role === 'admin' ? 'bg-yellow-400/20 text-yellow-400' : 'bg-blue-400/20 text-blue-400'
-                        }`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {editingId === user.uid ? (
-                          <input 
-                            type="number" 
-                            className="bg-zinc-800 border border-white/20 rounded px-2 py-1 w-20 text-white"
-                            value={editLimit}
-                            onChange={(e) => setEditLimit(parseInt(e.target.value))}
-                          />
-                        ) : (
-                          user.dailyLimit
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-yellow-400" 
-                              style={{ width: `${Math.min(100, (user.requestsToday / user.dailyLimit) * 100)}%` }}
-                            />
-                          </div>
-                          <span className="text-xs">{user.requestsToday} / {user.dailyLimit}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {editingId === user.uid ? (
-                          <div className="flex gap-2">
-                            <button 
-                              onClick={() => handleUpdateLimit(user.uid)}
-                              className="p-1.5 bg-emerald-500/20 text-emerald-500 rounded-lg hover:bg-emerald-500/30"
-                            >
-                              <Save className="w-4 h-4" />
-                            </button>
-                            <button 
-                              onClick={() => setEditingId(null)}
-                              className="p-1.5 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <button 
-                            onClick={() => {
-                              setEditingId(user.uid);
-                              setEditLimit(user.dailyLimit);
-                            }}
-                            className="p-1.5 bg-white/5 text-zinc-400 rounded-lg hover:bg-white/10 hover:text-white"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </td>
+            <div className="bg-zinc-900/40 border border-white/5 rounded-[2rem] overflow-hidden backdrop-blur-md">
+              <div className="p-5 border-b border-white/5 bg-white/5 flex items-center gap-4">
+                <Search className="w-5 h-5 text-zinc-500" />
+                <input 
+                  type="text" 
+                  placeholder="Ism yoki telefon orqali qidirish..."
+                  className="bg-transparent border-none outline-none text-white text-sm w-full font-medium placeholder:text-zinc-600"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-zinc-500 text-[10px] uppercase font-black tracking-widest border-b border-white/5 bg-zinc-900/20">
+                      <th className="px-8 py-5">Foydalanuvchi</th>
+                      <th className="px-8 py-5">Rol</th>
+                      <th className="px-8 py-5">Kunlik Limit</th>
+                      <th className="px-8 py-5">Bugungi ishlatish</th>
+                      <th className="px-8 py-5 text-right">Amallar</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {filteredUsers.map((user) => (
+                      <tr key={user.uid} className="text-zinc-300 hover:bg-white/5 transition-colors group">
+                        <td className="px-8 py-5">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-white text-sm">{user.displayName || "Noma'lum"}</span>
+                            <span className="text-xs text-zinc-500 font-medium font-mono">{user.phone}</span>
+                            {!user.isActive && <span className="text-[9px] text-red-500 font-black uppercase mt-1">Bloklangan 🚫</span>}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <button 
+                            onClick={() => handleUpdateRole(user.uid, user.role)}
+                            className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border ${
+                              user.role === 'admin' ? 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20' : 'bg-zinc-800 text-zinc-400 border-white/5 hover:text-zinc-300'
+                            }`}
+                          >
+                            {user.role}
+                          </button>
+                        </td>
+                        <td className="px-8 py-5">
+                          {editingId === user.uid ? (
+                            <div className="flex items-center gap-2">
+                               <input 
+                                type="number" 
+                                className="bg-zinc-800 border border-yellow-400/30 rounded-lg px-3 py-1.5 w-24 text-white text-sm font-bold focus:outline-none focus:border-yellow-400"
+                                value={editLimit}
+                                onChange={(e) => setEditLimit(parseInt(e.target.value))}
+                              />
+                              <button onClick={() => handleUpdateLimit(user.uid)} className="text-emerald-500 hover:bg-emerald-500/10 p-1.5 rounded-lg"><Save className="w-4 h-4"/></button>
+                              <button onClick={() => setEditingId(null)} className="text-zinc-500 hover:bg-zinc-800 p-1.5 rounded-lg"><X className="w-4 h-4"/></button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-3 cursor-pointer hover:text-white" onClick={() => { setEditingId(user.uid); setEditLimit(user.dailyLimit); }}>
+                              <span className="text-sm font-bold">{user.dailyLimit}</span>
+                              <Edit2 className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-zinc-500" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-24 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full transition-all ${user.requestsToday >= user.dailyLimit ? 'bg-red-500' : 'bg-yellow-400'}`}
+                                style={{ width: `${Math.min(100, (user.requestsToday / (user.dailyLimit || 1)) * 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold font-mono">{user.requestsToday} / {user.dailyLimit}</span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                           <div className="flex justify-end gap-2">
+                              <button 
+                                onClick={() => handleToggleUser(user.uid, user.isActive)}
+                                className={`p-2.5 rounded-xl transition-all ${user.isActive ? 'hover:bg-red-500/10 text-zinc-500 hover:text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}
+                                title={user.isActive ? "Bloklash" : "Faollashtirish"}
+                              >
+                                {user.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteUser(user.uid)}
+                                className="p-2.5 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-xl transition-all"
+                                title="O'chirish"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                           </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         ) : (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="max-w-md mx-auto bg-zinc-900 border border-white/10 p-8 rounded-3xl"
+            className="max-w-xl mx-auto bg-zinc-900/40 border border-white/5 p-8 rounded-[2.5rem] backdrop-blur-md"
           >
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-yellow-400/10 rounded-lg">
-                <Lock className="w-5 h-5 text-yellow-400" />
+            <div className="flex items-center gap-4 mb-10">
+              <div className="p-3 bg-yellow-400/10 rounded-2xl">
+                <Database className="w-6 h-6 text-yellow-400" />
               </div>
-              <h2 className="text-xl font-bold text-white">Admin Ma'lumotlari</h2>
+              <div>
+                <h2 className="text-xl font-black text-white uppercase tracking-tight">Tizim Sozlamalari</h2>
+                <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest mt-0.5">Global Parameters</p>
+              </div>
             </div>
 
-            <form onSubmit={handleUpdateAdminSettings} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Yangi Login</label>
+            <form onSubmit={handleUpdateGlobalSettings} className="space-y-8">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Standart Kunlik Limit</label>
                 <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                  <CheckCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600" />
                   <input 
-                    type="text"
-                    value={newLogin}
-                    onChange={(e) => setNewLogin(e.target.value)}
-                    className="w-full bg-zinc-800 border border-white/5 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-yellow-400/50 transition-colors"
-                    required
+                    type="number"
+                    value={defaultDailyLimit}
+                    onChange={(e) => setDefaultDailyLimit(parseInt(e.target.value))}
+                    className="w-full bg-zinc-800/50 border border-white/5 rounded-2xl py-4.5 pl-13 pr-4 text-white text-sm font-bold focus:outline-none focus:border-yellow-400/50 transition-all focus:bg-zinc-800"
                   />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-zinc-600 uppercase">searches</span>
                 </div>
+                <p className="text-[10px] text-zinc-600 ml-1 font-medium italic">Yangi foydalanuvchilar uchun avtomatik o'rnatiladigan limit.</p>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-1">Yangi Parol</label>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Admin Kunlik Limit</label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                  <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600" />
                   <input 
-                    type="text"
-                    value={newPass}
-                    onChange={(e) => setNewPass(e.target.value)}
-                    className="w-full bg-zinc-800 border border-white/5 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-yellow-400/50 transition-colors"
-                    required
+                    type="number"
+                    value={adminDailyLimit}
+                    onChange={(e) => setAdminDailyLimit(parseInt(e.target.value))}
+                    className="w-full bg-zinc-800/50 border border-white/5 rounded-2xl py-4.5 pl-13 pr-4 text-white text-sm font-bold focus:outline-none focus:border-yellow-400/50 transition-all focus:bg-zinc-800"
                   />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-zinc-600 uppercase">unlimited</span>
                 </div>
               </div>
 
               <button 
                 type="submit"
                 disabled={saveLoading}
-                className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="group relative w-full font-black py-5 rounded-[1.25rem] overflow-hidden text-black uppercase tracking-widest text-sm transition-all disabled:opacity-50 mt-4 shadow-[0_0_30px_rgba(250,204,21,0.1)] active:scale-[0.98]"
               >
-                {saveLoading ? "Saqlanmoqda..." : "O'zgarishlarni saqlash"}
+                <div className="absolute inset-0 bg-yellow-400 group-hover:bg-yellow-300 transition-colors" />
+                <span className="relative flex items-center justify-center gap-3">
+                  {saveLoading ? "Saqlanmoqda..." : <>Saqlash <Save className="w-5 h-5" /></>}
+                </span>
               </button>
             </form>
           </motion.div>
