@@ -1,10 +1,14 @@
-const API_URL = import.meta.env?.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:8000/api/v1' : 'https://web-production-3b13.up.railway.app/api/v1');
+const API_URL =
+  import.meta.env?.VITE_API_URL ||
+  (window.location.hostname === 'localhost'
+    ? 'http://localhost:8000/api/v1'
+    : 'https://web-production-3b13.up.railway.app/api/v1');
 
 const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem('token');
   return {
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 };
 
@@ -12,7 +16,12 @@ const getToken = (): string => localStorage.getItem('token') || '';
 
 export const api = {
   auth: {
-    register: async (data: { phone: string; password: string; displayName: string }) => {
+    register: async (data: {
+      email: string;
+      password: string;
+      confirm_password: string;
+      display_name: string;
+    }) => {
       const res = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -25,7 +34,7 @@ export const api = {
       return res.json();
     },
 
-    login: async (data: { phone: string; password: string }) => {
+    login: async (data: { email: string; password: string }) => {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -34,6 +43,19 @@ export const api = {
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));
         throw new Error(err.detail || 'Login failed');
+      }
+      return res.json();
+    },
+
+    googleLogin: async (google_token: string) => {
+      const res = await fetch(`${API_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ google_token }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || 'Google login failed');
       }
       return res.json();
     },
@@ -51,28 +73,15 @@ export const api = {
       return res.json();
     },
 
-    updateName: async (displayName: string) => {
+    updateName: async (display_name: string) => {
       const res = await fetch(`${API_URL}/user/profile/name`, {
         method: 'PUT',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ displayName }),
+        body: JSON.stringify({ display_name }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));
         throw new Error(err.detail || 'Name update failed');
-      }
-      return res.json();
-    },
-
-    updatePassword: async (data: { oldPassword: string; newPassword: string }) => {
-      const res = await fetch(`${API_URL}/user/profile/password`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(err.detail || 'Password update failed');
       }
       return res.json();
     },
@@ -114,13 +123,12 @@ export const api = {
   },
 
   search: {
-    // BUG FIX #1: field nomi 'image' bo'lishi kerak, 'file' emas
     identify: async (file: File) => {
       const formData = new FormData();
       formData.append('image', file);
       const res = await fetch(`${API_URL}/search/identify`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${getToken()}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
         body: formData,
       });
       if (!res.ok) {
@@ -177,11 +185,11 @@ export const api = {
       return res.json();
     },
 
-    toggleUser: async (uid: string, isActive: boolean) => {
+    toggleUser: async (uid: string, is_active: boolean) => {
       const res = await fetch(`${API_URL}/admin/users/${uid}/toggle`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ isActive }),
+        body: JSON.stringify({ is_active }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -190,11 +198,11 @@ export const api = {
       return res.json();
     },
 
-    updateLimit: async (uid: string, dailyLimit: number) => {
+    updateLimit: async (uid: string, daily_limit: number) => {
       const res = await fetch(`${API_URL}/admin/users/${uid}/limit`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ dailyLimit }),
+        body: JSON.stringify({ daily_limit }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -233,19 +241,6 @@ export const api = {
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));
         throw new Error(err.detail || 'Stats fetch failed');
-      }
-      return res.json();
-    },
-
-    updateSettings: async (settings: { defaultDailyLimit?: number; adminDailyLimit?: number }) => {
-      const res = await fetch(`${API_URL}/admin/settings`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(settings),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(err.detail || 'Settings update failed');
       }
       return res.json();
     },
